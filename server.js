@@ -4,8 +4,10 @@ const connectDB = require('./config/db');
 const configureServer = require('./config/serverConfig');
 const apiRoutes = require('./routes/api');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
+const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/upload');
+
 const path = require('path');
 
 dotenv.config();
@@ -36,6 +38,7 @@ app.use((req, res) => {
 
 app.use('/api/v1', apiRoutes);
 app.use('/api/v1', uploadRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 
 app.use((err, req, res, next) => {

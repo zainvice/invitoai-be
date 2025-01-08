@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-// Configure nodemailer transporter
+
 const transporter = nodemailer.createTransport({
   service: process.env.EMAIL_SERVICE,
   auth: {

@@ -7,6 +7,9 @@ const { requestLogger, errorLogger } = require('./middlewares/logger');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/upload');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const invitationRoutes = require ('./routes/invitationRoutes')
+
 
 const path = require('path');
 
@@ -32,14 +35,16 @@ app.get('/', (req, res) => {
 });
 
 
-app.use((req, res) => {
+/* app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
-
+ */
 app.use('/api/v1', apiRoutes);
 app.use('/api/v1', uploadRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/subscriptions', subscriptionRoutes);
+app.use('/api/v1/invitations', invitationRoutes);
 
 app.use((err, req, res, next) => {
     console.error('❌ Server Error:', err.message); 

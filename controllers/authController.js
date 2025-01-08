@@ -4,12 +4,13 @@ const sendEmail = require('../utils/email');
 
 // Signup
 const signup = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, phone, password, role } = req.body;
   try {
-    const user = new User({ name, email, password, role });
+    const user = new User({ name, email, phone, password, role });
     await user.save();
     res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
+    console.log(error)
     res.status(400).json({ error: 'Error registering user!' });
   }
 };
@@ -48,7 +49,7 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; 
     await user.save();
 
-    const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}`;
+    const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password/${token}`;
     await sendEmail(email, 'Password Reset', `Reset your password here: ${resetUrl}`);
     res.status(200).json({ message: 'Password reset email sent!' });
   } catch (error) {

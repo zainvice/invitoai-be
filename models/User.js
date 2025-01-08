@@ -4,7 +4,6 @@ const bcrypt = require('bcrypt');
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
     trim: true,
   },
   email: {
@@ -12,6 +11,13 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
+  },
+  subscription: {
+
+  },
+  phone: {
+    type: String,
+    required: true,
   },
   password: {
     type: String,
@@ -24,6 +30,10 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  status: {
+    type: Boolean,
+    default: true,
+  },
 }, { timestamps: true });
 
 

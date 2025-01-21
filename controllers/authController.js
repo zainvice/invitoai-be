@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const sendEmail = require('../utils/email');
+const Analytics = require("../models/Analytics");
+
 
 // Signup
 const signup = async (req, res) => {
@@ -8,9 +10,29 @@ const signup = async (req, res) => {
   try {
     const user = new User({ name, email, phone, password, role });
     await user.save();
+
+    // Get today's date in PST (year, month, day)
+    const today = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+    const todayDate = new Date(today).toISOString().split("T")[0];
+  
+      // Find today's analytics by date
+    let analytics = await Analytics.findOne({
+      createdAt: { $gte: new Date(todayDate), $lt: new Date(todayDate + "T23:59:59.999Z") }
+    });
+  
+    if (!analytics) {
+      // Create a new analytics record if it doesn't exist
+      analytics = new Analytics({ userCount: 1 });
+      await analytics.save();
+    } else {
+      analytics.userCount += 1;
+      await analytics.save();
+    }
+  
+
     res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     res.status(400).json({ error: 'Error registering user!' });
   }
 };
@@ -24,7 +46,7 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password!' });
     }
 
-    const token = jwt.sign({ id: user._id, name: user.name, email: user.email, role: user.role }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, name: user.name, email: user.email, role: user.role, status: user.status }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
     res.status(200).json({ token });
@@ -53,6 +75,7 @@ const forgotPassword = async (req, res) => {
     await sendEmail(email, 'Password Reset', `Reset your password here: ${resetUrl}`);
     res.status(200).json({ message: 'Password reset email sent!' });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: 'Failed to send reset email!' });
   }
 };

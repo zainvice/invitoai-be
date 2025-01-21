@@ -41,8 +41,10 @@ const getUserById = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
+    
+    const user = await User.findOne({email: req.params.id})
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+      user._id,
       req.body,
       { new: true, runValidators: true }
     );

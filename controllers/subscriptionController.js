@@ -3,37 +3,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 exports.createCheckoutSession = async (req, res) => {
     try {
-        const { productName, productDescription, amount, currency, interval, successUrl, cancelUrl } = req.body;
-        console.log(req.body)
+        const { line_items, uniqueName } = req.body;
+
         // Validate required fields
-        if (!productName || !amount || !successUrl || !cancelUrl) {
+        if (!line_items || !uniqueName) {
             return res.status(400).json({ error: 'Missing required fields in the request body.' });
         }
 
-        // Create the product
-        const product = await stripe.products.create({
-            name: productName, // Ensure this is not undefined
-            description: productDescription || 'No description provided.',
-        });
-
-        // Create the price
-        const price = await stripe.prices.create({
-            unit_amount: amount, // Ensure this is in the smallest currency unit
-            currency: currency || 'usd',
-            recurring: { interval: interval || 'month' },
-            product: product.id,
-        });
+        // Define success and cancel URLs
+        const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const successUrl = `${baseUrl}/user/invitations/${uniqueName}?paid=true&session_id={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = `${baseUrl}/user/invitations/${uniqueName}?paid=unpaid&session_id={CHECKOUT_SESSION_ID}`;
 
         // Create the checkout session
         const session = await stripe.checkout.sessions.create({
-            mode: 'subscription',
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: price.id,
-                    quantity: 1,
-                },
-            ],
+            line_items, // Use the line_items passed from the frontend
+            mode: 'payment',
             success_url: successUrl,
             cancel_url: cancelUrl,
         });
@@ -45,24 +31,55 @@ exports.createCheckoutSession = async (req, res) => {
     }
 };
 
+exports.handleStripeWebhook = async (req, res) => {
+    const payload = req.body;
+    const sig = req.headers['stripe-signature'];
 
-exports.handleWebhook = async (req, res) => {
-  const payload = req.body;
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    try {
+        const event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
 
-  try {
-    const event = stripe.webhooks.constructEvent(payload, sig, endpointSecret);
+        if (event.type === 'checkout.session.completed') {
+            const session = event.data.object;
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      console.log('Subscription was successful:', session);
-      // Update user subscription in the database
+            // Mark the payment as completed in your database
+            const { client_reference_id, payment_status } = session;
+
+            if (payment_status === 'paid') {
+                // Update the database with the payment success
+                console.log(`Payment for session ${client_reference_id} is successful.`);
+            }
+        }
+
+        res.status(200).send('Webhook received');
+    } catch (error) {
+        console.error('Webhook error:', error.message);
+        res.status(400).send(`Webhook error: ${error.message}`);
+    }
+};
+
+exports.verifyStripeSession = async (req, res) => {
+    const { session_id } = req.params;
+
+    if (!session_id) {
+        return res.status(400).json({ error: 'Missing session ID' });
     }
 
-    res.json({ received: true });
-  } catch (error) {
-    console.error('Webhook error:', error.message);
-    res.status(400).send(`Webhook Error: ${error.message}`);
-  }
+    try {
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+
+        // Check payment status and user identity (optional)
+        if (session.payment_status === 'paid') {
+            // Payment successful
+            return res.status(200).json({ success: true, message: 'Payment Completed!' });
+        } else {
+            return res.status(400).json({ message: 'Payment not completed!' });
+        }
+    } catch (error) {
+        console.error('Error verifying Stripe session:', error.message);
+        res.status(500).json({ error: 'Server error' });
+    }
 };
+
+
+
+

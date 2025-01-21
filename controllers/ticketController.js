@@ -28,6 +28,7 @@ exports.getAllTickets = async (req, res) => {
 exports.getTicketsByUser = async (req, res) => {
     try {
         const { userId } = req.params;
+        console.log("USER", userId)
         const tickets = await Ticket.find({ user: userId });
 
         res.status(200).json({ success: true, data: tickets });
@@ -58,7 +59,7 @@ exports.updateTicket = async (req, res) => {
         const { ticketId } = req.params;
         const { status } = req.body;
 
-        const ticket = await Ticket.findByIdAndUpdate(ticketId, { status }, { new: true });
+        const ticket = await Ticket.findByIdAndUpdate({_id: ticketId}, { status }, { new: true });
         if (!ticket) {
             return res.status(404).json({ success: false, message: "Ticket not found" });
         }

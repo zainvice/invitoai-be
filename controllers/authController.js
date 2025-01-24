@@ -71,8 +71,9 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; 
     await user.save();
 
-    const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password/${token}`;
-    await sendEmail(email, 'Password Reset', `Reset your password here: ${resetUrl}`);
+    const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173'
+    const resetUrl = `${baseUrl}/reset-password/${token}`;
+    await sendEmail(email, 'Password Reset', `This link will expire in 15 minutes. Reset your password here: ${resetUrl}`);
     res.status(200).json({ message: 'Password reset email sent!' });
   } catch (error) {
     console.log(error);
@@ -98,8 +99,13 @@ const resetPassword = async (req, res) => {
     await user.save();
     res.status(200).json({ message: 'Password reset successfully!' });
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token has expired. Please request a new password reset.' });
+    }
+    console.error(error);
     res.status(500).json({ error: 'Failed to reset password!' });
   }
 };
+
 
 module.exports = { signup, login, forgotPassword, resetPassword };
